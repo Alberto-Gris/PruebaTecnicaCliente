@@ -1,51 +1,196 @@
 import { useFetch,usePost } from "./useFetch";
+import { useState,useEffect } from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle';
+import 'bootstrap-icons/font/bootstrap-icons.css';
+import axios from "axios";
 
 export function App() {
 
-    const {data,loading} = useFetch("http://localhost:3000/usuarios/mostrarContactos");
+    //var {data,loading} = useFetch("http://localhost:3000/usuarios/mostrarContactos");
+    const [data,setData] = useState([]);
+    const [contacts, setContacts] = useState([]);
+
+    const [title,setTitle] = useState('');
+    const [operation,setOperation] = useState(1);
+
+    //Datos de un nuevo usuario
+    const [id,setId] = useState('');
+    const [name,setName] = useState('');
+    const [email,setEmail] = useState('');
+    const [password,setPassword] = useState('');
+
+    useEffect(()=>{
+        getData();
+    },[]);
+
+    const getData = async () => {
+        const respuesta = await axios.get("http://localhost:3000/usuarios/mostrarContactos");
+        setData(respuesta.data);
+        //console.log(respuesta.data);
+    };
+
+    const muestra = (userId) => {
+        //console.log(`Usuario con ID: ${userId}`);
+        // Buscar el usuario por ID y obtener sus contactos
+        const user = data.find(user => user._id === userId);
+        //console.log(user.contacts);
+        setContacts(user.contacts);
+    };
+
+    const openModal = (op,id,name,email,password) => {
+        setName('');
+        setEmail('');
+        setPassword('');
+        //setId('');
+        setOperation(op);
+        if (op === 1) {
+            setTitle('Nuevo Usuario');
+        }else if (op === 2) {
+            setTitle('Editar Usuario');
+            setName(name);
+            setEmail(email);
+            setPassword(password);
+            setId(id);
+        }
+    };
+
+    const validar = () => {
+        var parametros;
+        var metodo;
+        if (name.trim() !== '') {
+            if (email.trim() !== '') {
+                if (password.trim() !== '') {
+                    if (operation === 1) {
+                        parametros= {name:name.trim(), email:email.trim(), password:password.trim()};
+                        metodo = 'POST';
+                    }else{
+                        parametros= {name:name.trim(), email:email.trim(), password:password.trim()};
+                        metodo = 'PUT';
+                    }
+                    enviarSolicitud(metodo,parametros);
+                }
+            }
+        }
+        //console.log("No trunca");
+    }
+
+    const enviarSolicitud = async (metodo,parametros) => {
+        if (operation === 1) {
+            await axios({method:metodo,url: 'http://localhost:3000/usuarios/nuevoUsuario',data:parametros}).then(function(respuesta){
+                //console.log(respuesta);
+                document.getElementById('btnCerrar').click();
+            }).catch(function(error){
+                console.log(error);
+            });
+        }else{
+            await axios({method:metodo,url:'http://localhost:3000/usuarios/actualizar/'+id,data:parametros}).then(function(respuesta){
+                //console.log(respuesta);
+                document.getElementById('btnCerrar').click();
+            }).catch(function(error){
+                console.log(error);
+            });
+        }
+        getData();
+        //data,loading = useFetch("http://localhost:3000/usuarios/mostrarContactos");
+    }
+
+    const eliminarUsuario = (id) => {
+
+    }
 
     return(
+        
         <div className="App">
             <div className="container-fluid">
                 <div className="row mt-3">
                     <div className="col-md-4 offset-4">
                         <div className="d-grid mx-auto">
-                            <button className="btn btn-dark">
-                                Nuevo Usuario <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-plus" viewBox="0 0 16 16">
-                                <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/>
-                                </svg>
+                            <button className="btn btn-dark" onClick={() => openModal(1)} data-bs-toggle="modal" data-bs-target="#modalNuevoUsuario">
+                                Nuevo Usuario <i className="bi bi-plus"></i>
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="row">
-                <div class="col-4">
-                    <div class="list-group" id="list-tab" role="tablist">
-                        {loading && <li>Loading...</li>}
-                        {data?.map((user)=>(<a class="list-group-item list-group-item-action active" id="list-home-list" data-bs-toggle="list" href="#list-home" role="tab" aria-controls="list-home" key={user.id}>{user.name}</a>))}
-                        <a >Inicio</a>
-                        <a class="list-group-item list-group-item-action" id="list-profile-list" data-bs-toggle="list" href="#list-profile" role="tab" aria-controls="list-profile">Perfil</a>
-                    <a class="list-group-item list-group-item-action" id="list-messages-list" data-bs-toggle="list" href="#list-messages" role="tab" aria-controls="list-messages">Mensajes</a>
-                    <a class="list-group-item list-group-item-action" id="list-settings-list" data-bs-toggle="list" href="#list-settings" role="tab" aria-controls="list-settings">Configuración</a>
+            <div className="row">
+                <div className="col-4">
+                    <h1>Lista de Usuarios</h1>
+                    <ul className="list-group" id="list-tab" role="tablist">
+                        {data?.map((user)=>(
+                        <li className="list-group-item list-group-item-action" onClick={() => muestra(user._id)} data-bs-toggle="list" href={'#'+user.name} role="tab" key={user.id}>{user.name} 
+                        <button 
+                        className="btn btn-outline-success btn-sm float-end offset-1"
+                        >
+                        Nuevo Contacto <i className="bi bi-person-add"></i>
+                        </button>
+                        <button 
+                        className="btn btn-sm float-end btn-danger  offset-1"
+                        onClick={() => editar(user._id)}>
+                        Eliminar <i className="bi bi-trash3"></i>
+                        </button>
+                        <button 
+                        className="btn btn-sm float-end btn-warning" data-bs-toggle="modal" data-bs-target="#modalNuevoUsuario"
+                        onClick={() => openModal(2,user._id,user.name,user.email,user.password)}>
+                        Editar <i className="bi bi-pencil-fill"></i>
+                        </button>
+                        </li>
+                        ))}
+                    </ul>
+                </div>
+                <div className="col-8">
+                    <div className="tab-content" id="nav-tabContent">
+                    <div>
+                        <h1>Lista de Contactos</h1>
+                        <ul className="list-group">
+                            {contacts.length > 0 ? (
+                            contacts.map(contact => (
+                                <li className="list-group-item" key={contact._id}>
+                                {contact.name} {contact.lastName} - {contact.email} - {contact.phoneNumber}
+                                </li>
+                            ))
+                            ) : (
+                            <li className="list-group-item">No hay contactos</li>
+                            )}
+                        </ul>
+                        </div>
                     </div>
                 </div>
-                <div class="col-8">
-                    <div class="tab-content" id="nav-tabContent">
-                    <div class="tab-pane fade show active" id="list-home" role="tabpanel" aria-labelledby="list-home-list">1</div>
-                    <div class="tab-pane fade" id="list-profile" role="tabpanel" aria-labelledby="list-profile-list">2</div>
-                    <div class="tab-pane fade" id="list-messages" role="tabpanel" aria-labelledby="list-messages-list">3</div>
-                    <div class="tab-pane fade" id="list-settings" role="tabpanel" aria-labelledby="list-settings-list">4</div>
-                    </div>
-                </div>
-                </div>
-            <div>
-                <ul>
+            </div>
 
-                </ul>
+            <div className="modal fade" id="modalNuevoUsuario" aria-hidden="true">
+                <div className="modal-dialog">
+                    <div className="modal-content">
+                        <div className="modal-header">
+                            <h5 className="modal-title">{title}</h5>
+                    </div>
+                    <div className="modal-body">
+                        <input type="hidden" id="nombre"></input>
+                        <div className="input-group mb-3">
+                            <span className="input-group-text"><i className="bi bi-person"></i></span>
+                            <input type="text" id="nombre" className="form-control" placeholder="Name" value={name}
+                            onChange={(e)=>setName(e.target.value)}></input>
+                        </div>
+                        <div className="input-group mb-3">
+                            <span className="input-group-text"><i className="bi bi-envelope"></i></span>
+                            <input type="text" id="nombre" className="form-control" placeholder="Email" value={email}
+                            onChange={(e)=>setEmail(e.target.value)}></input>
+                        </div>
+                        <div className="input-group mb-3">
+                            <span className="input-group-text"><i className="bi bi-key-fill"></i></span>
+                            <input type="text" id="nombre" className="form-control" placeholder="Password" value={password}
+                            onChange={(e)=>setPassword(e.target.value)}></input>
+                        </div>
+                    </div>
+                        <div className="modal-footer">
+                            <button type="button" id="btnCerrar" className="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                            <button type="button" onClick={() => validar()} className="btn btn-primary">Guardar</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );
+
+
 }

@@ -4,6 +4,8 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import axios from "axios";
+import Swal from "sweetalert2";
+import withReactContent from "sweetalert2-react-content";
 
 export function App() {
 
@@ -95,8 +97,31 @@ export function App() {
         //data,loading = useFetch("http://localhost:3000/usuarios/mostrarContactos");
     }
 
-    const eliminarUsuario = (id) => {
+    const enviarEliminacion = async (metodo,idL) => {
+        await axios({method:metodo,url:'http://localhost:3000/usuarios/eliminar/'+idL,data:{}}).then(function(respuesta){
+            //console.log(respuesta);
+            document.getElementById('btnCerrar').click();
+        }).catch(function(error){
+            console.log(error);
+        });
+        getData();
+    }
 
+    const eliminarUsuario = (idL) => {
+        const MySwal = withReactContent(Swal);
+        MySwal.fire({
+            title:'Seguro de eliminar al usuario?',
+            icon:'question',text:'Eliminacion permanente',
+            showCancelButton:true,confirmButtonText:'Si, eliminar',cancelButtonText:'Cancelar'
+        }).then((result)=>{
+            if (result.isConfirmed) {
+                //setId(id);
+                console.log("Eliminado,",idL);
+                enviarEliminacion('DELETE',idL);
+            }else{
+                //Alerta
+            }
+        })
     }
 
     return(
@@ -118,15 +143,14 @@ export function App() {
                     <h1>Lista de Usuarios</h1>
                     <ul className="list-group" id="list-tab" role="tablist">
                         {data?.map((user)=>(
-                        <li className="list-group-item list-group-item-action" onClick={() => muestra(user._id)} data-bs-toggle="list" href={'#'+user.name} role="tab" key={user.id}>{user.name} 
+                        <li className="list-group-item list-group-item-action" onClick={() => muestra(user._id)} data-bs-toggle="list" role="tab" key={user.id}>{user.name} 
                         <button 
-                        className="btn btn-outline-success btn-sm float-end offset-1"
-                        >
+                        className="btn btn-success btn-sm float-end offset-1">
                         Nuevo Contacto <i className="bi bi-person-add"></i>
                         </button>
                         <button 
                         className="btn btn-sm float-end btn-danger  offset-1"
-                        onClick={() => editar(user._id)}>
+                        onClick={() => eliminarUsuario(user._id)}>
                         Eliminar <i className="bi bi-trash3"></i>
                         </button>
                         <button 
